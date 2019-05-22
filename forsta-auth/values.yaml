@@ -1,0 +1,27 @@
+image:
+  repository: alexsdutton/forsta-auth-simple
+  tag: "0.1"
+  pullPolicy: IfNotPresent
+
+web:
+  replicacount: 1
+
+service:
+  name: forsta-auth
+  type: LoadBalancer
+  externalPort: 8000
+  internalPort: 8000
+
+email:
+  from_address: sentry@sentry.local
+  host: smtp
+  port: 25
+  use_tls: false
+  user:
+  password:
+  enable_replies: false
+
+postgresql:
+  enabled: true
+  postgresDatabase: forsta-auth
+  postgresUser: forsta-auth

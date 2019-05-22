@@ -1,0 +1,121 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "fullname" . }}-web
+  labels:
+    app: {{ template "fullname" . }}-web
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  replicas: {{ .Values.web.replicacount }}
+  template:
+    metadata:
+      {{- if .Values.web.podAnnotations }}
+      annotations:
+{{ toYaml .Values.web.podAnnotations | indent 8 }}
+      {{- end }}
+      labels:
+        app: {{ template "fullname" . }}
+        release: "{{ .Release.Name }}"
+        role: web
+        {{- if .Values.web.podLabels }}
+{{ toYaml .Values.web.podLabels | indent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.web.affinity }}
+      affinity:
+{{ toYaml .Values.web.affinity | indent 8 }}
+      {{- end }}
+      {{- if .Values.web.nodeSelector }}
+      nodeSelector:
+{{ toYaml .Values.web.nodeSelector | indent 8 }}
+      {{- end }}
+      {{- if .Values.web.tolerations }}
+      tolerations:
+{{ toYaml .Values.web.tolerations | indent 8 }}
+      {{- end }}
+      {{- if .Values.web.schedulerName }}
+      schedulerName: "{{ .Values.web.schedulerName }}"
+      {{- end }}
+      {{- if .Values.image.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.image.imagePullSecrets | indent 8 }}
+      {{- end }}
+      containers:
+      - name: {{ .Chart.Name }}-web
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.service.internalPort }}
+        env:
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ template "fullname" . }}
+              key: secret-key
+        - name: GUNICORN_CMD_ARGS
+          value: "-b 0.0.0.0:{{ .Values.service.internalPort }} --capture-output --access-logfile - --error-logfile -"
+        - name: DB_USER
+          value: {{ default "forsta-auth" .Values.postgresql.postgresUser | quote }}
+        - name: DB_NAME
+          value: {{ default "forsta-auth" .Values.postgresql.postgresDatabase | quote }}
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+            {{- if .Values.postgresql.existingSecret }}
+              name: {{ .Values.postgresql.existingSecret }}
+            {{- else }}
+              name: {{ template "postgresql.secret" . }}
+            {{- end }}
+              key: postgres-password
+        - name: POSTGRES_HOST
+          value: {{ template "postgresql.host" . }}
+        - name: POSTGRES_PORT
+          value: {{ template "postgresql.port" . }}
+        - name: DATABASE_URL
+          value: 'postgres://$(DB_USER):$(DB_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(DB_NAME)'
+        - name: EMAIL_HOST
+          value: {{ default "" .Values.email.host | quote }}
+        - name: EMAIL_PORT
+          value: {{ default "" .Values.email.port | quote }}
+        - name: EMAIL_USER
+          value: {{ default "" .Values.email.user | quote }}
+        - name: EMAIL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+            {{- if .Values.email.existingSecret }}
+              name: {{ .Values.email.existingSecret }}
+            {{- else }}
+              name: {{ template "fullname" . }}
+            {{- end }}
+              key: smtp-password
+        - name: EMAIL_USE_TLS
+          value: {{ .Values.email.use_tls | quote }}
+        - name: SERVER_EMAIL
+          value: {{ .Values.email.from_address | quote }}
+{{- if .Values.web.env }}
+{{ toYaml .Values.web.env | indent 8 }}
+{{- end }}
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /
+            port: {{ .Values.service.internalPort }}
+            scheme: HTTP
+          initialDelaySeconds: 50
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 2
+        readinessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /
+            port: {{ .Values.service.internalPort }}
+            scheme: HTTP
+          initialDelaySeconds: 50
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 2
+        resources:
+{{ toYaml .Values.web.resources | indent 12 }}

@@ -1,0 +1,9 @@
+apiVersion: v1
+description: Forstå Authentication Service
+name: forsta-auth
+version: 0.1.0
+appVersion: 0.1
+home: https://github.com/forsta-iam/forsta-auth
+maintainers:
+  - name: Alexander Dutton
+    email: forsta@alexdutton.co.uk
