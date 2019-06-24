@@ -1,10 +1,13 @@
 image:
   repository: alexsdutton/forsta-auth-simple
-  tag: "0.1"
-  pullPolicy: IfNotPresent
+  tag: latest
+  pullPolicy: Always
+
+secretKey: seas9LiTohx7chuquo0chai4ahkah4ei
 
 web:
   replicacount: 1
+  debug: "off"
 
 service:
   name: forsta-auth
@@ -13,15 +16,14 @@ service:
   internalPort: 8000
 
 email:
-  from_address: sentry@sentry.local
-  host: smtp
-  port: 25
-  use_tls: false
+  serverEmail: server@forsta-auth.local
+  defaultFromEmail: accounts@forsta-auth.local
+  host:
+  port: 587
   user:
   password:
-  enable_replies: false
 
 postgresql:
-  enabled: true
-  postgresDatabase: forsta-auth
-  postgresUser: forsta-auth
+  postgresqlUsername: forsta-auth
+  postgresqlDatabase: forsta-auth
+  postgresqlPassword: ui9jiequeey3ahph5oochateiJivech9

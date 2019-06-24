@@ -56,46 +56,62 @@ spec:
               key: secret-key
         - name: GUNICORN_CMD_ARGS
           value: "-b 0.0.0.0:{{ .Values.service.internalPort }} --capture-output --access-logfile - --error-logfile -"
+        - name: DEBUG
+          value: "{{ .Values.web.debug }}"
         - name: DB_USER
-          value: {{ default "forsta-auth" .Values.postgresql.postgresUser | quote }}
+          value: "{{ .Values.postgresql.postgresqlUsername }}"
         - name: DB_NAME
-          value: {{ default "forsta-auth" .Values.postgresql.postgresDatabase | quote }}
+          value: "{{ .Values.postgresql.postgresqlDatabase }}"
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-            {{- if .Values.postgresql.existingSecret }}
-              name: {{ .Values.postgresql.existingSecret }}
-            {{- else }}
-              name: {{ template "postgresql.secret" . }}
-            {{- end }}
-              key: postgres-password
+              name: {{ template "forsta_auth.postgresql.secretName" . }}
+              key: postgresql-password
         - name: POSTGRES_HOST
-          value: {{ template "postgresql.host" . }}
+          value: {{ template "forsta_auth.postgresql.host" . }}
         - name: POSTGRES_PORT
-          value: {{ template "postgresql.port" . }}
+          value: "{{ .Values.postgresql.service.port }}"
         - name: DATABASE_URL
           value: 'postgres://$(DB_USER):$(DB_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(DB_NAME)'
+        - name: EMAIL_BACKEND
+          value: 'django.core.mail.backends.smtp.EmailBackend'
         - name: EMAIL_HOST
           value: {{ default "" .Values.email.host | quote }}
         - name: EMAIL_PORT
           value: {{ default "" .Values.email.port | quote }}
-        - name: EMAIL_USER
+        - name: EMAIL_HOST_USER
           value: {{ default "" .Values.email.user | quote }}
-        - name: EMAIL_PASSWORD
+        - name: EMAIL_HOST_PASSWORD
           valueFrom:
             secretKeyRef:
-            {{- if .Values.email.existingSecret }}
-              name: {{ .Values.email.existingSecret }}
-            {{- else }}
-              name: {{ template "fullname" . }}
-            {{- end }}
+              name: {{ template "secretname" . }}
               key: smtp-password
         - name: EMAIL_USE_TLS
           value: {{ .Values.email.use_tls | quote }}
         - name: SERVER_EMAIL
-          value: {{ .Values.email.from_address | quote }}
+          value: {{ .Values.email.serverEmail | quote }}
+        - name: DEFAULT_FROM_EMAIL
+          value: {{ .Values.email.defaultFromEmail | quote }}
+        - name: SECURE_PROXY_SSL_HEADER_NAME
+          value: HTTP_X_FORWARDED_PROTO
+        - name: SECURE_PROXY_SSL_HEADER_VALUE
+          value: https
+{{- if .Values.web.logging }}
+        - name: LOGGING
+          value: |
+{{ toJson .Values.web.logging | indent 12}}
+{{- end }}
 {{- if .Values.web.env }}
 {{ toYaml .Values.web.env | indent 8 }}
+{{- end }}
+{{- if .Values.web.secretEnv }}
+{{- range $i, $a := .Values.web.secretEnv }}
+        - name: {{ $a }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ template "secretname" $ }}
+              key: {{ $a }}
+{{- end }}
 {{- end }}
         livenessProbe:
           failureThreshold: 5

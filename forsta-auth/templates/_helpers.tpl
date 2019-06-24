@@ -23,49 +23,32 @@ If release name contains chart name it will be used as a full name.
 {{- end -}}
 {{- end -}}
 
-{{/*
-Create a default fully qualified app name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-*/}}
-{{- define "postgresql.fullname" -}}
-{{- printf "%s-%s" .Release.Name "postgresql" | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-{{- define "redis.fullname" -}}
-{{- printf "%s-%s" .Release.Name "redis" | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-{{- define "smtp.fullname" -}}
-{{- printf "%s-%s" .Release.Name "smtp" | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
-{{/*
-Set postgres host
-*/}}
-{{- define "postgresql.host" -}}
-{{- if .Values.postgresql.enabled -}}
-{{- template "postgresql.fullname" . -}}
+{{- define "secretname" -}}
+{{- if .Values.secretName -}}
+{{ .Values.secretname }}
 {{- else -}}
-{{- .Values.postgresql.postgresHost | quote -}}
+{{ template "fullname" . }}
 {{- end -}}
 {{- end -}}
 
-{{/*
-Set postgres secret
-*/}}
-{{- define "postgresql.secret" -}}
-{{- if .Values.postgresql.enabled -}}
-{{- template "postgresql.fullname" . -}}
-{{- else -}}
-{{- template "fullname" . -}}
-{{- end -}}
+{{- define "forsta_auth.postgresql.fullname" -}}
+{{- $name := default "postgresql" .Values.postgresql.nameOverride -}}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
-Set postgres port
+Get the password secret.
 */}}
-{{- define "postgresql.port" -}}
-{{- if .Values.postgresql.enabled -}}
-    "5432"
+{{- define "forsta_auth.postgresql.secretName" -}}
+{{- if .Values.postgresql.existingSecret }}
+    {{- printf "%s" .Values.postgresql.existingSecret -}}
+{{- else if .Values.postgresql.existingSecret -}}
+    {{- printf "%s" .Values.postgresql.existingSecret -}}
 {{- else -}}
-{{- default "5432" .Values.postgresql.postgresPort | quote -}}
+    {{- printf "%s" (include "forsta_auth.postgresql.fullname" .) -}}
 {{- end -}}
+{{- end -}}
+
+{{- define "forsta_auth.postgresql.host" -}}
+{{ template "forsta_auth.postgresql.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
 {{- end -}}
